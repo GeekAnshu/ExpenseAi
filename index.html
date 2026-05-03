@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ExpenseAI — Smart Expense Categorization Bot</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg-primary: #ffffff;
+    --bg-secondary: #f8fafc;
+    --bg-tertiary: #f1f5f9;
+    --text-primary: #0f172a;
+    --text-secondary: #64748b;
+    --border: rgba(15,23,42,0.1);
+    --border-md: rgba(15,23,42,0.18);
+    --accent: #10b981;
+    --accent-hover: #059669;
+    --accent-light: rgba(16,185,129,0.08);
+    --danger: #ef4444;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-xl: 16px;
+    --font: 'Segoe UI', system-ui, sans-serif;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg-primary: #0f172a;
+      --bg-secondary: #1e293b;
+      --bg-tertiary: #0f172a;
+      --text-primary: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --border: rgba(241,245,249,0.08);
+      --border-md: rgba(241,245,249,0.15);
+    }
+  }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+
+  .app {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 740px;
+    height: 720px;
+    border: 0.5px solid var(--border-md);
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    background: var(--bg-primary);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.08);
+  }
+
+  /* HEADER */
+  .header {
+    background: #0f172a;
+    color: #f8fafc;
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+  .header-icon {
+    width: 36px; height: 36px;
+    background: #10b981;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; flex-shrink: 0;
+  }
+  .header-text h1 { font-size: 15px; font-weight: 600; }
+  .header-text p  { font-size: 12px; color: #94a3b8; margin-top: 1px; }
+  .header-badge {
+    margin-left: auto;
+    background: rgba(34,197,94,0.15);
+    color: #4ade80;
+    border: 0.5px solid rgba(34,197,94,0.3);
+    border-radius: 20px;
+    font-size: 11px;
+    padding: 3px 10px;
+    white-space: nowrap;
+    display: flex; align-items: center; gap: 5px;
+  }
+  .badge-dot { width: 6px; height: 6px; background: #4ade80; border-radius: 50%; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+
+
+  /* TABS */
+  .tabs {
+    display: flex;
+    border-bottom: 0.5px solid var(--border);
+    background: var(--bg-secondary);
+    flex-shrink: 0;
+  }
+  .tab {
+    padding: 10px 18px;
+    font-size: 13px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    border: none;
+    border-bottom: 2px solid transparent;
+    background: none;
+    font-family: var(--font);
+    transition: all 0.15s;
+  }
+  .tab.active { color: #10b981; border-bottom-color: #10b981; font-weight: 600; }
+  .tab:hover:not(.active) { color: var(--text-primary); background: var(--bg-primary); }
+
+  /* PANELS */
+  .panel { display: none; flex: 1; flex-direction: column; overflow: hidden; }
+  .panel.active { display: flex; }
+
+  /* CHAT PANEL */
+  .messages {
+    flex: 1; overflow-y: auto;
+    padding: 16px;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .msg { display: flex; gap: 8px; align-items: flex-start; max-width: 90%; }
+  .msg.user { flex-direction: row-reverse; align-self: flex-end; }
+  .msg-avatar {
+    width: 30px; height: 30px; border-radius: 50%;
+    background: #1e293b;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; flex-shrink: 0;
+  }
+  .msg.user .msg-avatar { background: #10b981; }
+  .msg-bubble {
+    background: var(--bg-secondary);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 10px 14px;
+    font-size: 13.5px;
+    line-height: 1.65;
+  }
+  .msg.user .msg-bubble {
+    background: #0f172a;
+    color: #f1f5f9;
+    border-color: transparent;
+  }
+
+  /* EXPENSE RESULT CARD inside bubble */
+  .expense-result {
+    background: var(--bg-primary);
+    border: 0.5px solid var(--border-md);
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+    margin-top: 8px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 4px 12px;
+  }
+  .er-label { font-size: 10px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; }
+  .er-val   { font-size: 13px; font-weight: 500; margin-top: 1px; }
+  .er-amt   { font-size: 20px; font-weight: 700; color: #10b981; grid-column: 2; grid-row: 1 / 3; align-self: center; }
+
+  .cat-pill {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 10px; border-radius: 20px;
+    font-size: 12px; font-weight: 600; margin-top: 4px;
+  }
+  .cat-food          { background: #fef3c7; color: #92400e; }
+  .cat-transport     { background: #dbeafe; color: #1e3a8a; }
+  .cat-shopping      { background: #fce7f3; color: #831843; }
+  .cat-health        { background: #dcfce7; color: #14532d; }
+  .cat-utilities     { background: #f3e8ff; color: #581c87; }
+  .cat-entertainment { background: #fff7ed; color: #7c2d12; }
+  .cat-travel        { background: #e0f2fe; color: #0c4a6e; }
+  .cat-other         { background: #f1f5f9; color: #475569; }
+
+  .tip-row {
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    border-left: 3px solid #10b981;
+    padding-left: 8px;
+    font-style: italic;
+  }
+  .conf-row { margin-top: 6px; font-size: 11px; color: var(--text-secondary); }
+
+  .typing-dots { display: flex; gap: 4px; padding: 4px 0; }
+  .dot { width: 6px; height: 6px; background: var(--text-secondary); border-radius: 50%; animation: bounce 1.2s infinite; }
+  .dot:nth-child(2) { animation-delay: 0.2s; }
+  .dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes bounce {
+    0%,80%,100% { transform: translateY(0); }
+    40%          { transform: translateY(-6px); }
+  }
+
+  .quick-actions {
+    padding: 8px 16px 4px;
+    display: flex; gap: 6px; flex-wrap: wrap;
+    flex-shrink: 0;
+  }
+  .quick-btn {
+    background: var(--bg-secondary);
+    border: 0.5px solid var(--border);
+    border-radius: 20px;
+    padding: 5px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    font-family: var(--font);
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .quick-btn:hover { border-color: #10b981; color: #10b981; background: var(--accent-light); }
+
+  .input-area {
+    padding: 12px 16px;
+    border-top: 0.5px solid var(--border);
+    display: flex; gap: 8px;
+    background: var(--bg-primary);
+    flex-shrink: 0;
+  }
+  .chat-input {
+    flex: 1;
+    border: 0.5px solid var(--border-md);
+    border-radius: var(--radius-md);
+    padding: 9px 13px;
+    font-size: 13.5px;
+    font-family: var(--font);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    outline: none;
+    height: 40px;
+  }
+  .chat-input:focus { border-color: #10b981; box-shadow: 0 0 0 2px rgba(16,185,129,0.12); }
+  .send-btn {
+    background: #10b981; color: white;
+    border: none; border-radius: var(--radius-md);
+    padding: 0 18px; font-size: 13px;
+    cursor: pointer; font-weight: 600;
+    font-family: var(--font);
+    transition: all 0.15s; white-space: nowrap;
+  }
+  .send-btn:hover   { background: var(--accent-hover); }
+  .send-btn:disabled { background: var(--bg-secondary); color: var(--text-secondary); cursor: not-allowed; }
+
+  /* HISTORY PANEL */
+  .history-list {
+    flex: 1; overflow-y: auto;
+    padding: 16px;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .tx-card {
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+    display: flex; align-items: center; gap: 12px;
+    background: var(--bg-primary);
+    transition: background 0.12s;
+  }
+  .tx-card:hover { background: var(--bg-secondary); }
+  .tx-icon {
+    width: 38px; height: 38px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 17px; flex-shrink: 0;
+  }
+  .tx-info { flex: 1; min-width: 0; }
+  .tx-name { font-size: 13.5px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tx-meta { font-size: 12px; color: var(--text-secondary); margin-top: 3px; }
+  .tx-right { text-align: right; flex-shrink: 0; }
+  .tx-amount { font-size: 14px; font-weight: 600; }
+  .tx-amount.debit  { color: #ef4444; }
+  .tx-amount.credit { color: #10b981; }
+  .tx-date { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+
+  /* SUMMARY PANEL */
+  .summary-scroll { flex: 1; overflow-y: auto; padding: 16px; }
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px; margin-bottom: 20px;
+  }
+  .stat-card {
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    padding: 14px;
+  }
+  .stat-label { font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+  .stat-value { font-size: 22px; font-weight: 600; }
+  .stat-value.red   { color: #ef4444; }
+  .stat-value.green { color: #10b981; }
+
+  .section-title {
+    font-size: 12px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--text-secondary); margin-bottom: 14px;
+  }
+  .cat-row-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .cat-label-text { font-size: 12.5px; color: var(--text-secondary); width: 120px; flex-shrink: 0; }
+  .cat-bar-wrap { flex: 1; background: var(--bg-secondary); border-radius: 4px; height: 8px; overflow: hidden; }
+  .cat-bar { height: 100%; border-radius: 4px; transition: width 0.7s ease; }
+  .cat-amt-text { font-size: 12px; font-weight: 600; width: 80px; text-align: right; flex-shrink: 0; }
+  .cat-pct { font-size: 11px; color: var(--text-secondary); width: 34px; text-align: right; flex-shrink: 0; }
+
+  /* EMPTY STATE */
+  .empty-state {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 40px 20px; color: var(--text-secondary); gap: 8px; text-align: center;
+  }
+  .empty-state p { font-size: 13px; }
+
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-thumb { background: var(--border-md); border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-icon">💰</div>
+    <div class="header-text">
+      <h1>ExpenseAI</h1>
+      <p>Smart transaction categorization · powered by Gemini</p>
+    </div>
+    <div class="header-badge"><span class="badge-dot"></span> AI Active</div>
+  </div>
+
+
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('chat')">Chat &amp; Classify</button>
+    <button class="tab" onclick="switchTab('history')">Transaction history</button>
+    <button class="tab" onclick="switchTab('summary')">Summary</button>
+  </div>
+
+  <!-- CHAT PANEL -->
+  <div class="panel active" id="panel-chat">
+    <div class="messages" id="messages"></div>
+    <div class="quick-actions">
+      <button class="quick-btn" onclick="sendQuick('I spent ₹450 at Dominos yesterday')">🍕 Food expense</button>
+      <button class="quick-btn" onclick="sendQuick('Paid ₹1200 to Uber this week')">🚗 Transport</button>
+      <button class="quick-btn" onclick="sendQuick('₹3500 Amazon purchase for clothes')">🛍 Shopping</button>
+      <button class="quick-btn" onclick="sendQuick('Electricity bill ₹900 paid')">💡 Utilities</button>
+      <button class="quick-btn" onclick="sendQuick('Doctor visit ₹600 consultation fee')">🏥 Healthcare</button>
+      <button class="quick-btn" onclick="sendQuick('Show my spending summary')">📊 Summary</button>
+    </div>
+    <div class="input-area">
+      <input class="chat-input" id="chat-input"
+        placeholder="Describe a transaction… e.g. 'Paid ₹2400 at Big Bazaar'"
+        onkeydown="handleKey(event)" />
+      <button class="send-btn" id="send-btn" onclick="sendMessage()">Send →</button>
+    </div>
+  </div>
+
+  <!-- HISTORY PANEL -->
+  <div class="panel" id="panel-history">
+    <div class="history-list" id="history-list">
+      <div class="empty-state">
+        <span style="font-size:40px">📋</span>
+        <p style="font-size:15px;font-weight:500;">No transactions yet</p>
+        <p>Chat with the bot to classify expenses!</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUMMARY PANEL -->
+  <div class="panel" id="panel-summary">
+    <div class="summary-scroll" id="summary-content">
+      <div class="empty-state">
+        <span style="font-size:40px">📊</span>
+        <p style="font-size:15px;font-weight:500;">No data yet</p>
+        <p>Start classifying expenses to see insights!</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════
+   ExpenseAI — Gemini 2.5 Flash (FREE tier)
+   Get your free API key at:
+   https://aistudio.google.com/app/apikey
+═══════════════════════════════════════════════ */
+
+const GEMINI_MODEL = 'gemini-2.5-flash';  // Free tier model
+
+const SYSTEM_PROMPT = `You are ExpenseAI, a helpful, interactive financial assistant and expense categorization bot. 
+
+When the user describes a transaction or payment, respond with ONLY this JSON (no extra text, no markdown):
+{
+  "type": "expense",
+  "name": "merchant or short description",
+  "amount": 450,
+  "currency": "₹",
+  "category": "Food & Dining",
+  "subcategory": "Restaurant",
+  "type_tx": "debit",
+  "confidence": 0.95,
+  "tip": "one short budgeting tip for this category"
+}
+
+Valid categories: Food & Dining, Transport, Shopping, Health & Medical, Utilities, Entertainment, Travel, Education, Groceries, Personal Care, Subscriptions, Other
+type_tx must be: debit (money spent) or credit (money received)
+Default currency: ₹
+
+When the user asks for a spending summary, greets you, asks for financial advice, or makes general conversation, respond with ONLY this JSON:
+{
+  "type": "info",
+  "message": "Your conversational or summary response here. You can use markdown and emojis. Use the provided past transactions data to give accurate summaries when asked."
+}
+
+Return ONLY valid JSON. No markdown block formatting outside the JSON object.`;
+
+const CATEGORY_META = {
+  'Food & Dining':    { icon:'🍕', color:'#f59e0b', bar:'#fbbf24', pill:'cat-food' },
+  'Transport':        { icon:'🚗', color:'#3b82f6', bar:'#60a5fa', pill:'cat-transport' },
+  'Shopping':         { icon:'🛍', color:'#ec4899', bar:'#f472b6', pill:'cat-shopping' },
+  'Health & Medical': { icon:'🏥', color:'#10b981', bar:'#34d399', pill:'cat-health' },
+  'Utilities':        { icon:'💡', color:'#8b5cf6', bar:'#a78bfa', pill:'cat-utilities' },
+  'Entertainment':    { icon:'🎬', color:'#f97316', bar:'#fb923c', pill:'cat-entertainment' },
+  'Travel':           { icon:'✈️', color:'#06b6d4', bar:'#22d3ee', pill:'cat-travel' },
+  'Education':        { icon:'📚', color:'#6366f1', bar:'#818cf8', pill:'cat-other' },
+  'Groceries':        { icon:'🛒', color:'#84cc16', bar:'#a3e635', pill:'cat-health' },
+  'Personal Care':    { icon:'💆', color:'#f43f5e', bar:'#fb7185', pill:'cat-shopping' },
+  'Subscriptions':    { icon:'📱', color:'#0ea5e9', bar:'#38bdf8', pill:'cat-transport' },
+  'Other':            { icon:'📦', color:'#6b7280', bar:'#9ca3af', pill:'cat-other' }
+};
+
+let GEMINI_API_KEY = 'AIzaSyC5JhY_jC9ODOr9vYCBKwn6ZQun-IWYpTU'; // <-- PASTE YOUR API KEY HERE
+let isLoading = false;
+
+// Load data from localStorage
+let transactions = JSON.parse(localStorage.getItem('expenseai_transactions') || '[]');
+let chatHistory = JSON.parse(localStorage.getItem('expenseai_chatHistory') || '[]');
+
+function saveData() {
+  localStorage.setItem('expenseai_transactions', JSON.stringify(transactions));
+  localStorage.setItem('expenseai_chatHistory', JSON.stringify(chatHistory));
+}
+
+/* ─── TAB SWITCHING ─── */
+function switchTab(tab) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('panel-' + tab).classList.add('active');
+  ['chat','history','summary'].forEach((t,i) => {
+    if (t === tab) document.querySelectorAll('.tab')[i].classList.add('active');
+  });
+  if (tab === 'history') renderHistory();
+  if (tab === 'summary') renderSummary();
+}
+
+/* ─── RENDER MESSAGES ─── */
+function addUserMsg(text) {
+  const msgs = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.className = 'msg user';
+  div.innerHTML = `<div class="msg-avatar">👤</div><div class="msg-bubble">${esc(text)}</div>`;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function addBotMsg(data) {
+  const msgs = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.className = 'msg bot';
+
+  let inner = '';
+  if (data.type === 'expense') {
+    const meta = CATEGORY_META[data.category] || CATEGORY_META['Other'];
+    const amt = Number(data.amount).toLocaleString('en-IN');
+    inner = `
+      <div class="msg-bubble">
+        <div style="font-size:13px;color:var(--text-secondary);margin-bottom:6px;">Transaction classified ✓</div>
+        <div class="expense-result">
+          <div>
+            <div class="er-label">Merchant</div>
+            <div class="er-val">${esc(data.name)}</div>
+          </div>
+          <div class="er-amt">${esc(data.currency||'₹')}${amt}</div>
+          <div style="grid-column:1;margin-top:6px;">
+            <div class="er-label">Category</div>
+            <div>
+              <span class="cat-pill ${meta.pill}">${meta.icon} ${esc(data.category)}</span>
+              ${data.subcategory ? `<span style="font-size:11px;color:var(--text-secondary);margin-left:6px;">${esc(data.subcategory)}</span>` : ''}
+            </div>
+          </div>
+        </div>
+        ${data.tip ? `<div class="tip-row">💡 ${esc(data.tip)}</div>` : ''}
+        <div class="conf-row">Confidence: ${Math.round((data.confidence||0.9)*100)}%</div>
+      </div>`;
+  } else if (data.type === 'off_topic') {
+    inner = `<div class="msg-bubble" style="border-left:3px solid var(--danger);color:var(--text-secondary);">🚫 ${esc(data.message)}</div>`;
+  } else {
+    inner = `<div class="msg-bubble">${esc(data.message || 'Something went wrong.')}</div>`;
+  }
+
+  div.innerHTML = `<div class="msg-avatar">🤖</div>${inner}`;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function addErrorMsg(msg) {
+  const msgs = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.className = 'msg bot';
+  div.innerHTML = `<div class="msg-avatar">🤖</div><div class="msg-bubble" style="color:#ef4444;">⚠️ ${esc(msg)}</div>`;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function showTyping() {
+  const msgs = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.className = 'msg bot'; div.id = 'typing-msg';
+  div.innerHTML = `<div class="msg-avatar">🤖</div><div class="msg-bubble"><div class="typing-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>`;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function removeTyping() {
+  const el = document.getElementById('typing-msg');
+  if (el) el.remove();
+}
+
+/* ─── CALL GEMINI API ─── */
+async function callGemini(userText) {
+  // Build conversation history for multi-turn
+  chatHistory.push({ role: 'user', parts: [{ text: userText }] });
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+
+  // Inject the transactions list into the system instruction so the bot can summarize
+  const currentPrompt = SYSTEM_PROMPT + '\n\nUSER PAST TRANSACTIONS DATA FOR SUMMARIES:\n' + JSON.stringify(transactions, null, 2);
+
+  const body = {
+    systemInstruction: { parts: [{ text: currentPrompt }] },
+    contents: chatHistory,
+    generationConfig: {
+      temperature: 0.3,
+      maxOutputTokens: 1024,
+      responseMimeType: 'application/json'  // Force JSON output
+    }
+  };
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    chatHistory.pop(); // remove failed message
+    const errMsg = data?.error?.message || `API error ${res.status}`;
+    throw new Error(errMsg);
+  }
+
+  // Extract text from Gemini response
+  const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+  // Add assistant response to history
+  chatHistory.push({ role: 'model', parts: [{ text: raw }] });
+
+  // Clean and parse JSON
+  const clean = raw.replace(/```json|```/g, '').trim();
+  return JSON.parse(clean);
+}
+
+/* ─── SEND MESSAGE ─── */
+async function sendMessage() {
+  if (isLoading) return;
+
+  if (!GEMINI_API_KEY || GEMINI_API_KEY === 'YOUR_API_KEY_HERE') {
+    addErrorMsg('Please set your Gemini API key in the GEMINI_API_KEY variable in the code.\nGet a FREE key at: aistudio.google.com/app/apikey');
+    return;
+  }
+
+  const input = document.getElementById('chat-input');
+  const btn   = document.getElementById('send-btn');
+  const text  = input.value.trim();
+  if (!text) return;
+
+  isLoading = true;
+  btn.disabled = true;
+  input.value = '';
+
+  addUserMsg(text);
+  showTyping();
+
+  try {
+    const parsed = await callGemini(text);
+    removeTyping();
+    addBotMsg(parsed);
+
+    // Save to transaction log
+    if (parsed.type === 'expense' && Number(parsed.amount) > 0) {
+      transactions.unshift({ ...parsed, id: Date.now(), rawDate: new Date().toISOString() });
+    }
+    saveData();
+  } catch(err) {
+    removeTyping();
+    addErrorMsg(err.message);
+  }
+
+  isLoading = false;
+  btn.disabled = false;
+  input.focus();
+}
+
+function sendQuick(text) {
+  document.getElementById('chat-input').value = text;
+  sendMessage();
+}
+
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+}
+
+/* ─── HISTORY ─── */
+function renderHistory() {
+  const list = document.getElementById('history-list');
+  if (!transactions.length) {
+    list.innerHTML = `<div class="empty-state"><span style="font-size:40px">📋</span><p style="font-size:15px;font-weight:500;">No transactions yet</p><p>Chat with the bot to classify expenses!</p></div>`;
+    return;
+  }
+  list.innerHTML = '';
+  transactions.forEach(tx => {
+    const meta = CATEGORY_META[tx.category] || CATEGORY_META['Other'];
+    const date = new Date(tx.rawDate).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' });
+    const amt  = Number(tx.amount).toLocaleString('en-IN');
+    const isCredit = tx.type_tx === 'credit';
+    const card = document.createElement('div');
+    card.className = 'tx-card';
+    card.innerHTML = `
+      <div class="tx-icon" style="background:${meta.color}22;">${meta.icon}</div>
+      <div class="tx-info">
+        <div class="tx-name">${esc(tx.name || 'Transaction')}</div>
+        <div class="tx-meta"><span class="cat-pill ${meta.pill}" style="padding:1px 8px;font-size:11px;">${esc(tx.category)}</span></div>
+      </div>
+      <div class="tx-right">
+        <div class="tx-amount ${isCredit?'credit':'debit'}">${isCredit?'+':'-'}${esc(tx.currency||'₹')}${amt}</div>
+        <div class="tx-date">${date}</div>
+      </div>`;
+    list.appendChild(card);
+  });
+}
+
+/* ─── SUMMARY ─── */
+function renderSummary() {
+  const container = document.getElementById('summary-content');
+  if (!transactions.length) {
+    container.innerHTML = `<div class="empty-state"><span style="font-size:40px">📊</span><p style="font-size:15px;font-weight:500;">No data yet</p><p>Start classifying expenses to see insights!</p></div>`;
+    return;
+  }
+
+  const debits  = transactions.filter(t => t.type_tx !== 'credit');
+  const credits = transactions.filter(t => t.type_tx === 'credit');
+  const total   = debits.reduce((s,t)  => s + Number(t.amount), 0);
+  const totalCr = credits.reduce((s,t) => s + Number(t.amount), 0);
+
+  const catTotals = {};
+  debits.forEach(t => { catTotals[t.category] = (catTotals[t.category]||0) + Number(t.amount); });
+  const sorted = Object.entries(catTotals).sort((a,b) => b[1]-a[1]);
+  const maxVal = sorted[0]?.[1] || 1;
+
+  const bars = sorted.map(([cat, amt]) => {
+    const meta = CATEGORY_META[cat] || CATEGORY_META['Other'];
+    const pct  = total > 0 ? Math.round((amt/total)*100) : 0;
+    return `<div class="cat-row-bar">
+      <div class="cat-label-text">${meta.icon} ${esc(cat)}</div>
+      <div class="cat-bar-wrap"><div class="cat-bar" style="width:${Math.round((amt/maxVal)*100)}%;background:${meta.bar};"></div></div>
+      <div class="cat-amt-text">₹${amt.toLocaleString('en-IN')}</div>
+      <div class="cat-pct">${pct}%</div>
+    </div>`;
+  }).join('');
+
+  container.innerHTML = `
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-label">Total spent</div><div class="stat-value red">₹${total.toLocaleString('en-IN')}</div></div>
+      <div class="stat-card"><div class="stat-label">Income / credits</div><div class="stat-value green">₹${totalCr.toLocaleString('en-IN')}</div></div>
+      <div class="stat-card"><div class="stat-label">Transactions</div><div class="stat-value">${transactions.length}</div></div>
+    </div>
+    <div class="section-title">Spending by category</div>
+    ${bars}`;
+}
+
+/* ─── UTILS ─── */
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ─── WELCOME & LOAD DATA ─── */
+window.addEventListener('load', () => {
+  if (chatHistory.length > 0) {
+    // Render existing chat history
+    chatHistory.forEach(msg => {
+      if (msg.role === 'user') {
+        addUserMsg(msg.parts[0].text);
+      } else if (msg.role === 'model') {
+        try {
+          const parsed = JSON.parse(msg.parts[0].text.replace(/```json|```/g, '').trim());
+          addBotMsg(parsed);
+        } catch (e) {
+          addBotMsg({ type: 'info', message: msg.parts[0].text });
+        }
+      }
+    });
+  } else {
+    // Show welcome message
+    setTimeout(() => {
+      const msgs = document.getElementById('messages');
+      const div = document.createElement('div');
+      div.className = 'msg bot';
+      div.innerHTML = `<div class="msg-avatar">🤖</div><div class="msg-bubble">
+        <strong>Hi! I'm ExpenseAI 👋</strong><br><br>
+        I'm powered by <strong>Gemini 2.5 Flash</strong> (free tier — no billing needed!)<br><br>
+        <strong>Step 1:</strong> Put your free API key in the JavaScript code<br>
+        <strong>Step 2:</strong> Describe any transaction!<br><br>
+        Examples:<br>
+        • "Paid ₹500 at McDonald's"<br>
+        • "₹1500 Uber ride to airport"<br>
+        • "Bought medicines for ₹800"<br><br>
+        <em style="color:var(--text-secondary);font-size:12px;">I only handle expense-related queries — that's my specialty!</em>
+      </div>`;
+      msgs.appendChild(div);
+      msgs.scrollTop = msgs.scrollHeight;
+    }, 200);
+  }
+});
+</script>
+</body>
+</html>
