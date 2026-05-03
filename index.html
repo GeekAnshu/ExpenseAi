@@ -433,7 +433,7 @@ const CATEGORY_META = {
   'Other':            { icon:'📦', color:'#6b7280', bar:'#9ca3af', pill:'cat-other' }
 };
 
-let GEMINI_API_KEY = 'AIzaSyD-18v-Qo3Gx8uACN0FgKnKcB3yU1utl1I'; // <-- PASTE YOUR API KEY HERE
+let GEMINI_API_KEY = 'AIzaSyAxyzJsdJ4OkB2nQ0DGIuWt96GwjCFfikM'; // <-- PASTE YOUR API KEY HERE
 let isLoading = false;
 
 // Load data from localStorage
@@ -560,6 +560,11 @@ async function callGemini(userText) {
 
   if (!res.ok) {
     chatHistory.pop(); // remove failed message
+    
+    if (res.status === 429) {
+      throw new Error("You are sending messages too quickly and hit the free API rate limit. Please wait about a minute and try again! ⏳");
+    }
+    
     const errMsg = data?.error?.message || `API error ${res.status}`;
     throw new Error(errMsg);
   }
@@ -738,6 +743,7 @@ window.addEventListener('load', () => {
 </script>
 </body>
 </html>
+
 
 
 
