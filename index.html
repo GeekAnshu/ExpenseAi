@@ -433,7 +433,7 @@ const CATEGORY_META = {
   'Other':            { icon:'📦', color:'#6b7280', bar:'#9ca3af', pill:'cat-other' }
 };
 
-let GEMINI_API_KEY = 'AIzaSyCi0d84hDnK1GDPxJD27dhK3jkkdtz258g'; // <-- PASTE YOUR API KEY HERE
+let GEMINI_API_KEY = 'AIzaSyC5JhY_jC9ODOr9vYCBKwn6ZQun-IWYpTU'; // <-- PASTE YOUR API KEY HERE
 let isLoading = false;
 
 // Load data from localStorage
@@ -721,15 +721,14 @@ window.addEventListener('load', () => {
       const div = document.createElement('div');
       div.className = 'msg bot';
       div.innerHTML = `<div class="msg-avatar">🤖</div><div class="msg-bubble">
-        <strong>Hi! I'm ExpenseAI 👋</strong><br><br>
-        I'm powered by <strong>Gemini 2.5 Flash</strong> (free tier — no billing needed!)<br><br>
-        <strong>Step 1:</strong> Put your free API key in the JavaScript code<br>
-        <strong>Step 2:</strong> Describe any transaction!<br><br>
-        Examples:<br>
-        • "Paid ₹500 at McDonald's"<br>
-        • "₹1500 Uber ride to airport"<br>
-        • "Bought medicines for ₹800"<br><br>
-        <em style="color:var(--text-secondary);font-size:12px;">I only handle expense-related queries — that's my specialty!</em>
+        <strong>Welcome to ExpenseAI.</strong><br><br>
+        I am your intelligent financial assistant, powered by Gemini 2.5 Flash.<br><br>
+        Please describe a recent transaction, or ask me for a summary of your spending history.<br><br>
+        <em>Examples:</em><br>
+        • "I paid ₹500 at McDonald's today."<br>
+        • "Logged a ₹1500 Uber ride to the airport."<br>
+        • "Could you show me a summary of my expenses?"<br><br>
+        <em style="color:var(--text-secondary);font-size:12px;">I am designed to assist you specifically with expense categorization and financial insights.</em>
       </div>`;
       msgs.appendChild(div);
       msgs.scrollTop = msgs.scrollHeight;
@@ -739,4 +738,5 @@ window.addEventListener('load', () => {
 </script>
 </body>
 </html>
+
 
